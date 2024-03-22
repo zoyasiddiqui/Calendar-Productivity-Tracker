@@ -62,8 +62,16 @@ def main():
       start = event["start"].get("dateTime", event["start"].get("date"))
       print(start, event["summary"])
 
+    # Playing with Calendar Stuff
+    # https://developers.google.com/calendar/api/v3/reference/calendarList#resource
+    print("\nCalendar List Access Role Retrieval")
+    calendar_list_entry = service.calendarList().get(calendarId='zoyasdq.04@gmail.com').execute()
+    print(calendar_list_entry['accessRole'])
+    
+
   except HttpError as error:
     print(f"An error occurred: {error}")
+
 
 
 if __name__ == "__main__":
