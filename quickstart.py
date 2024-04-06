@@ -1,5 +1,6 @@
 import datetime
 import os.path
+import json
 
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -8,7 +9,7 @@ from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
 
 # If modifying these scopes, delete the file token.json.
-SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
+SCOPES = ["https://www.googleapis.com/auth/calendar"]
 
 
 def main():
@@ -60,7 +61,10 @@ def main():
     # Prints the start and name of the next 10 events
     for event in events:
       start = event["start"].get("dateTime", event["start"].get("date"))
-      print(start, event["summary"])
+      try:
+        print(start, event["summary"])
+      except KeyError:
+        pass
 
     # Playing with Calendar Stuff
     # https://developers.google.com/calendar/api/v3/reference/calendarList#resource
@@ -71,24 +75,20 @@ def main():
     # Getting all calendars for some user and listing them out
     print("\nPick a category.")
     page_token = None
-    all_calendars = []
-    count = 0
+    all_calendars = {}
     while True:
         calendar_list = service.calendarList().list(pageToken=page_token).execute()
         for calendar_list_entry in calendar_list['items']:
-            all_calendars.append(calendar_list_entry['summary'])
-            count += 1
+            all_calendars[calendar_list_entry['summary']] = calendar_list_entry['id']
         page_token = calendar_list.get('nextPageToken')
         if not page_token:
             break
     
-    for i in range(0, count):
-      print(all_calendars[i])
-
+    print(all_calendars.keys())
 
     #prompting for entry info : category, start time, end time
     cur_cat = input("Which category would you like to work in? ")
-    while(cur_cat not in all_calendars):
+    while(cur_cat not in all_calendars.keys()):
       print("This is not a valid option. Try again.")
       cur_cat = input("Which category would you like to work in? ")
 
@@ -98,7 +98,6 @@ def main():
     else:
       while(not ready):
          ready = input("Ready to start?")
-        
 
     done = input("Are you done working?")
     if (done):
@@ -107,17 +106,35 @@ def main():
       while(not done):
          done = input("Are you done working?")
 
-    print(start)
-    print(end)
+    #adjusting time for time difference
+    hours_added = datetime.timedelta(hours=-7)
+    start_time = start + hours_added
+    hours_added = datetime.timedelta(hours=-6) #need to add this so i don't have to wait between starting and ending
+    end_time = end + hours_added
 
+    start_str = start_time.strftime("%Y-%m-%dT%H:%M:%S-07:00")
+    end_str = end_time.strftime("%Y-%m-%dT%H:%M:%S-07:00")
 
+    title = input("Title your event: ")
 
+    #Inserting event
+    event = {
+      'summary': title,
+      'start': {
+          'dateTime': start_str,
+          'timeZone': 'America/Los_Angeles',
+      },
+      'end': {
+          'dateTime': end_str,
+          'timeZone': 'America/Los_Angeles',
+      }
+    }
 
+    event = service.events().insert(calendarId=all_calendars[cur_cat], body=event).execute()
+    print('Event created: %s' % (event.get('htmlLink')))
 
   except HttpError as error:
     print(f"An error occurred: {error}")
-
-
 
 if __name__ == "__main__":
   main()
