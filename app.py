@@ -1,8 +1,10 @@
 import tkinter as tk
+from tkinter import messagebox
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 
+# declare global variables
 SCOPES = ['https://www.googleapis.com/auth/calendar']
 
 def authenticate():
@@ -16,11 +18,27 @@ def main():
     root = tk.Tk()
 
     def login():
-        creds = authenticate()
+        try:
+            creds = authenticate()
+
+            login_button.pack_forget()
+            login_frame.destroy()
+            main_frame.pack()
+            welcome_label.pack()
+
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred during authentication:\n{str(e)}")
+            root.quit()
+
         # Use creds to access Google Calendar API
         # For example:
         # service = build('calendar', 'v3', credentials=creds)
-        # ...
+        # ...s
+
+    login_frame = tk.Frame(root)
+    login_frame.pack()
+    main_frame = tk.Frame(root)
+    welcome_label = tk.Label(main_frame, text="Welcome to the Application!")
 
     login_button = tk.Button(root, text="Login with Google", command=login)
     login_button.pack()
