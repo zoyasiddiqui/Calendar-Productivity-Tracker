@@ -28,7 +28,7 @@ def main():
       creds.refresh(Request())
     else:
       flow = InstalledAppFlow.from_client_secrets_file(
-          "credentials.json", SCOPES
+          "Calendar-Productivity-Tracker\credentials.json", SCOPES
       )
       creds = flow.run_local_server(port=0)
     # Save the credentials for the next run
@@ -85,6 +85,7 @@ def main():
             break
     
     print(all_calendars.keys())
+    print(all_calendars.values())
 
     #prompting for entry info : category, start time, end time
     cur_cat = input("Which category would you like to work in? ")
@@ -109,7 +110,7 @@ def main():
     #adjusting time for time difference
     hours_added = datetime.timedelta(hours=-7)
     start_time = start + hours_added
-    hours_added = datetime.timedelta(hours=-6) #need to add this so i don't have to wait between starting and ending
+    hours_added = datetime.timedelta(hours=-7) #need to add this so i don't have to wait between starting and ending
     end_time = end + hours_added
 
     start_str = start_time.strftime("%Y-%m-%dT%H:%M:%S-07:00")
