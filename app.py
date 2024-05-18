@@ -87,6 +87,9 @@ def main():
 
     def act(category, service, all_cals):
 
+        month_label.grid_remove()
+        all_label.grid_remove()
+
         title = tk.Entry(main_frame)
         title.insert(0, "Event Title")
         title.grid(row=2, column=2, padx=10, pady=5, sticky="e")
@@ -133,26 +136,75 @@ def main():
                 }
             }
 
-            event = service.events().insert(calendarId=id, body=event).execute()
-            data.create_event(connection, category, start_str)
+            event = service.events().insert(calendarId=id, body=event).execute() # add event to calendar
+            data.create_event(connection, category, start_str, end_str) # add event to database
 
-            alert.grid_remove()
-            title.insert(0, "Event Title")
+            alert.grid_remove() # remove the "Timer has started" label
+            title.delete(0, tk.END) # empty the input box
             title.grid(row=2, column=2, padx=10, pady=5, sticky="e")
         else:
             messagebox.showerror("Error", f"You have not started tracking yet. You must click start.")
 
     def get_stats(category):
-        pass
-        # take users to a new frame? or just display underneath? displaying underneath is easier and should be okay. 
-        # tell them: time spent in last month, number of days worked in last month, total time spent overall
+        global connection
+        all_events = data.get_all_by_category(connection, category)
+        t_hours = 0
+        t_mins = 0
+        t_secs = 0
+        m_hours = 0
+        m_mins = 0
+        m_secs = 0
 
+        # do all the work to find the amount of time worked
+        for e in all_events:
+            startdate = e[2].split("T")[1].split("-")[0].split(":")
+            enddate = e[3].split("T")[1].split("-")[0].split(":")
+
+            hour_delta = int(enddate[0]) - int(startdate[0])
+            min_delta = int(enddate[1]) - int(startdate[1])
+            secs_delta = int(enddate[2]) - int(startdate[2])
+            if hour_delta > 0:
+                t_hours += hour_delta
+            if min_delta > 0:
+                t_mins += min_delta
+            if secs_delta > 0:
+                t_secs += secs_delta
+            
+            event_month = int(e[2].split("T")[0].split("-")[1])
+            now = datetime.datetime.now(datetime.timezone.utc)
+            now_month = int(str(now).split()[0].split("-")[1])
+
+            if event_month == now_month:
+                if hour_delta > 0:
+                    m_hours += hour_delta
+                if min_delta > 0:
+                    m_mins += min_delta
+                if secs_delta > 0:
+                    m_secs += secs_delta
+
+        # adjust the labels and display stats
+        month_str = "This month you worked for %d hours, %d minutes and %d seconds" % (m_hours,m_mins,m_secs)
+        all_str = "Overall, you have worked for %d hours, %d minutes and %d seconds" %(t_hours,t_mins,t_secs)
+        month_label.config(text=month_str)
+        all_label.config(text=all_str)
+        month_label.grid(row=7, column=2, pady=10, stick="e")
+        all_label.grid(row=8, column=2, pady=5, stick="e")
+
+    # set up frames
     login_frame = tk.Frame(root)
     login_frame.pack()
     main_frame = tk.Frame(root)
+
+    # set up labels that we will add / remove later
     welcome_label = tk.Label(main_frame, text="Google Calendar Productivity Extension")
     instruction = tk.Label(main_frame, text="Pick a category to work in.")
+    
+    month_label = tk.Label(main_frame, text="")
+    all_label = tk.Label(main_frame, text="")
+    month_label.grid(row=7, column=2, pady=10, stick="e")
+    all_label.grid(row=8, column=2, pady=5, stick="e")
 
+    # setup buttons for login that we will now put on screen
     login_button = tk.Button(root, text="Login To Start", command=login)
     login_button.pack()
 
