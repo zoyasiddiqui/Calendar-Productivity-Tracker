@@ -1,8 +1,9 @@
 import datetime
 import os.path
-import json
 import tkinter as tk
 from tkinter import messagebox
+from tkinter import ttk
+from ttkthemes import ThemedTk
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
@@ -35,7 +36,9 @@ def authenticate():
     return creds
 
 def main():
-    root = tk.Tk()
+    root = ThemedTk(theme="breeze")
+    #style = ttk.Style(root)
+    #style.theme_use("clam")
     global start_time
     global end_time
     start_time = None
@@ -72,7 +75,7 @@ def main():
             for calendar_list_entry in calendar_list['items']:
                 cal = calendar_list_entry['summary']
                 all_cals[cal] = calendar_list_entry['id']
-                cal_btns.append(tk.Button(main_frame, text=cal, command=None))
+                cal_btns.append(ttk.Button(main_frame, text=cal, command=None))
             page_token = calendar_list.get('nextPageToken')
             if not page_token:
                 break
@@ -90,16 +93,16 @@ def main():
         month_label.grid_remove()
         all_label.grid_remove()
 
-        title = tk.Entry(main_frame)
+        title = ttk.Entry(main_frame)
         title.insert(0, "Event Title")
         title.grid(row=2, column=2, padx=10, pady=5, sticky="e")
-        alert = tk.Label(main_frame, text="Timer has started") #will show up when they click start
+        alert = ttk.Label(main_frame, text="Timer has started") #will show up when they click start
 
-        start = tk.Button(main_frame, text="Start", command=lambda: get_start_time(alert))
-        end = tk.Button(main_frame, text="End", command=lambda: wrapup(service, all_cals[category], category, title, alert))
+        start = ttk.Button(main_frame, text="Start", command=lambda: get_start_time(alert))
+        end = ttk.Button(main_frame, text="End", command=lambda: wrapup(service, all_cals[category], category, title, alert))
         start.grid(row=3, column=2, padx=5, pady=5, sticky="e")
         end.grid(row=4, column=2, padx=5, pady=5, sticky="e")
-        stats = tk.Button(main_frame, text="See stats for this category", command=lambda: get_stats(category))
+        stats = ttk.Button(main_frame, text="See stats for this category", command=lambda: get_stats(category))
         stats.grid(row=6, column=2, padx=5, pady=10, stick="e")
 
     def get_start_time(alert):
@@ -140,7 +143,7 @@ def main():
             data.create_event(connection, category, start_str, end_str) # add event to database
 
             alert.grid_remove() # remove the "Timer has started" label
-            title.delete(0, tk.END) # empty the input box
+            title.delete(0, ttk.END) # empty the input box
             title.grid(row=2, column=2, padx=10, pady=5, sticky="e")
         else:
             messagebox.showerror("Error", f"You have not started tracking yet. You must click start.")
@@ -191,21 +194,21 @@ def main():
         all_label.grid(row=8, column=2, pady=5, stick="e")
 
     # set up frames
-    login_frame = tk.Frame(root)
+    login_frame = ttk.Frame(root)
     login_frame.pack()
-    main_frame = tk.Frame(root)
+    main_frame = ttk.Frame(root)
 
     # set up labels that we will add / remove later
-    welcome_label = tk.Label(main_frame, text="Google Calendar Productivity Extension")
-    instruction = tk.Label(main_frame, text="Pick a category to work in.")
+    welcome_label = ttk.Label(main_frame, text="Google Calendar Productivity Extension")
+    instruction = ttk.Label(main_frame, text="Pick a category to work in.")
     
-    month_label = tk.Label(main_frame, text="")
-    all_label = tk.Label(main_frame, text="")
+    month_label = ttk.Label(main_frame, text="")
+    all_label = ttk.Label(main_frame, text="")
     month_label.grid(row=7, column=2, pady=10, stick="e")
     all_label.grid(row=8, column=2, pady=5, stick="e")
 
     # setup buttons for login that we will now put on screen
-    login_button = tk.Button(root, text="Login To Start", command=login)
+    login_button = ttk.Button(root, text="Login To Start", command=login)
     login_button.pack()
 
     root.mainloop()
