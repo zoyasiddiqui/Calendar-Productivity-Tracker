@@ -18,19 +18,20 @@ def create_table(connection):
         CREATE TABLE IF NOT EXISTS Events(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             category TEXT NOT NULL,
-            date TEXT NOT NULL
+            startdate TEXT NOT NULL,
+            enddate TEXT NOT NULL
         );
         """
         cur.execute(sql)
     except Exception as e:
         print(e)
 
-def create_event(connection, category, date):
+def create_event(connection, category, start, end):
     try:
-        sql = ''' INSERT INTO Events(category, date)
-                VALUES(?,?) '''
+        sql = ''' INSERT INTO Events(category, startdate, enddate)
+                VALUES(?,?,?) '''
         cur = connection.cursor()
-        cur.execute(sql, (category, date,))
+        cur.execute(sql, (category, start, end,))
         connection.commit()
         return cur.lastrowid
     except Exception as e:
