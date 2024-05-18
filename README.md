@@ -1,5 +1,6 @@
 # Calendar-Productivity-Tracker
-A Google Calendar Extension which gives users the options of all of their calendars as categories, and then tracks the amount of time they spend working in some category and adds it as an event to their calendar. An application for anybody looking to track and increase their productivity, or for any productivity gurus who are just major Google Workplace fans 😸
+This Google Calendar Extension gives users the options of all of their calendars as categories. Users can pick a category, start a timer, and name their event. When they end the timer, the event will be added to the calendar. Users can also choose to see statistics for some category, which will tell them the total amount of time they have worked in this category in all time, and in the month. 
+An application for anybody looking to track and increase their productivity, or for any productivity gurus who are just major Google Workplace fans 😸
 
 ## How to Deploy
 To use this application, you'll need to set up your own credentials with Google Cloud Platform and configure the application to use them. Follow the steps below to create a Google Cloud project, enable the Google Calendar API, and generate OAuth client credentials.
