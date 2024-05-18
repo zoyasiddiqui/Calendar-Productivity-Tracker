@@ -37,8 +37,6 @@ def authenticate():
 
 def main():
     root = ThemedTk(theme="breeze")
-    #style = ttk.Style(root)
-    #style.theme_use("clam")
     global start_time
     global end_time
     start_time = None
