@@ -141,7 +141,7 @@ def main():
             data.create_event(connection, category, start_str, end_str) # add event to database
 
             alert.grid_remove() # remove the "Timer has started" label
-            title.delete(0, ttk.END) # empty the input box
+            title.delete(0, tk.END) # empty the input box
             title.grid(row=2, column=2, padx=10, pady=5, sticky="e")
         else:
             messagebox.showerror("Error", f"You have not started tracking yet. You must click start.")
