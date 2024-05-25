@@ -17,25 +17,27 @@ def create_table(connection):
         sql = """
         CREATE TABLE IF NOT EXISTS Events(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
             category TEXT NOT NULL,
             startdate TEXT NOT NULL,
-            enddate TEXT NOT NULL
+            enddate TEXT NOT NULL,
+            UNIQUE(name, category, startdate, enddate)
         );
         """
         cur.execute(sql)
     except Exception as e:
-        print(e)
+        print("ERRORRR: ",e)
 
-def create_event(connection, category, start, end):
+def create_event(connection, category, name, start, end):
     try:
-        sql = ''' INSERT INTO Events(category, startdate, enddate)
-                VALUES(?,?,?) '''
+        sql = ''' INSERT INTO Events(category, name, startdate, enddate)
+                VALUES(?,?,?,?) '''
         cur = connection.cursor()
-        cur.execute(sql, (category, start, end,))
+        cur.execute(sql, (category, name, start, end,))
         connection.commit()
         return cur.lastrowid
     except Exception as e:
-        print(e)
+        print("ERRORRR: ",e)
         return None
     
 def get_all_by_category(connection, category):
