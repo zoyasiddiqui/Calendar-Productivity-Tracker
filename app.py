@@ -205,24 +205,33 @@ def main():
             startdate = e[3].split()[0].split("-") + e[3].split()[1].split(":")
             enddate = e[4].split()[0].split("-") + e[4].split()[1].split(":")
 
-            hour_delta = (int(enddate[3])%12) - (int(startdate[3])%12)
+            # we do the following so that, if its midnight, we dont get the wrong timing
+            if (int(startdate[3])%12) == 0: 
+                hour_delta = (int(enddate[3])%12) - 12
+            elif (int(enddate[3])%12) == 0:
+                hour_delta = 12 - (int(startdate[3])%12)
+            else:
+                hour_delta = (int(enddate[3])%12) - (int(startdate[3])%12)
             min_delta = int(enddate[4]) - int(startdate[4])
             day_delta = int(enddate[2]) - int(startdate[2])
+
+            print(hour_delta, min_delta, day_delta)
+
             # add to the users total time worked
-            if (hour_delta > 0) or (hour_delta < 0 and day_delta < 0):
-                t_hours += hour_delta
-            if (min_delta > 0) or (min_delta < 0 and day_delta < 0):
-                t_mins += min_delta
+            if (hour_delta > 0) or (hour_delta < 0 and day_delta > 0):
+                t_hours += abs(hour_delta)
+            if (min_delta > 0) or (min_delta < 0 and day_delta > 0):
+                t_mins += abs(min_delta)
             
             event_month = int(e[3].split()[0].split("-")[1])
             now = datetime.datetime.now(datetime.timezone.utc)
             now_month = int(str(now).split()[0].split("-")[1])
             # add to the users monthly time worked
             if event_month == now_month:
-                if (hour_delta > 0) or (hour_delta < 0 and day_delta < 0):
-                    m_hours += hour_delta
-                if (min_delta > 0) or (min_delta < 0 and day_delta < 0):
-                    m_mins += min_delta
+                if (hour_delta > 0) or (hour_delta < 0 and day_delta > 0):
+                    m_hours += abs(hour_delta)
+                if (min_delta > 0) or (min_delta < 0 and day_delta > 0):
+                    m_mins += abs(min_delta)
 
         # adjust the labels and display stats
         month_str = "This month you worked for %d hours, %d minutes " % (m_hours,m_mins)
@@ -327,7 +336,6 @@ def main():
             data.create_event(connection, category, name, start_time, end_time)
 
         _cleanup_checkboxes()
-
 
     def _cleanup_checkboxes():
         # in case the user had clicked on "add events" before this, but chose not to add anything, we will remove everything
