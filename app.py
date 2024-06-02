@@ -195,47 +195,68 @@ def main():
 
         global connection
         all_events = data.get_all_by_category(connection, category)
-        t_hours = 0
-        t_mins = 0
-        m_hours = 0
-        m_mins = 0
+        
+        hourdiff = 0
+        mindiff = 0
+        hourdifftotal = 0
+        mindifftotal = 0
 
         # do all the work to find the amount of time worked
         for e in all_events:
             startdate = e[3].split()[0].split("-") + e[3].split()[1].split(":")
             enddate = e[4].split()[0].split("-") + e[4].split()[1].split(":")
 
-            # we do the following so that, if its midnight, we dont get the wrong timing
-            if (int(startdate[3])%12) == 0: 
-                hour_delta = (int(enddate[3])%12) - 12
-            elif (int(enddate[3])%12) == 0:
-                hour_delta = 12 - (int(startdate[3])%12)
+            print(startdate)
+            print(enddate)
+
+            startday = int(startdate[2])
+            endday = int(enddate[2]) 
+            starthour = int(startdate[3]) 
+            endhour = int(enddate[3]) 
+            startmin = int(startdate[4])
+            endmin = int(enddate[4])
+
+            print(startday, endday, starthour, endhour, startmin, endmin)
+
+            curhourdiff = 0
+            curmindiff = 0
+
+            if endday != startday:
+                curhourdiff = (12-starthour) + endhour
             else:
-                hour_delta = (int(enddate[3])%12) - (int(startdate[3])%12)
-            min_delta = int(enddate[4]) - int(startdate[4])
-            day_delta = int(enddate[2]) - int(startdate[2])
+                curhourdiff = endhour - starthour            
 
-            print(hour_delta, min_delta, day_delta)
+            if endhour != starthour and endmin < startmin:
+                curhourdiff -= 1
+                curmindiff = (60 - startmin) + endmin
+            elif endhour != starthour and endmin > startmin:
+                curmindiff = (60 - startmin) + endmin
+            else:
+                curmindiff = endmin - startmin
 
-            # add to the users total time worked
-            if (hour_delta > 0) or (hour_delta < 0 and day_delta > 0):
-                t_hours += abs(hour_delta)
-            if (min_delta > 0) or (min_delta < 0 and day_delta > 0):
-                t_mins += abs(min_delta)
-            
-            event_month = int(e[3].split()[0].split("-")[1])
+            hourdifftotal += curhourdiff
+            mindifftotal += curmindiff
+
+            # checking that we never have an invalid number of minute
+            if mindifftotal > 60:
+                hourdifftotal += 1
+                mindifftotal -= 60
+
             now = datetime.datetime.now(datetime.timezone.utc)
-            now_month = int(str(now).split()[0].split("-")[1])
-            # add to the users monthly time worked
-            if event_month == now_month:
-                if (hour_delta > 0) or (hour_delta < 0 and day_delta > 0):
-                    m_hours += abs(hour_delta)
-                if (min_delta > 0) or (min_delta < 0 and day_delta > 0):
-                    m_mins += abs(min_delta)
+            cur_month = int(str(now).split()[0].split("-")[1])
+            event_month = int(startdate[1])
+            if cur_month == event_month:
+                hourdiff += curhourdiff
+                mindiff += curmindiff
+
+            # checking that we never have an invalid number of minute
+            if mindiff > 60:
+                hourdiff += 1
+                mindiff -= 60         
 
         # adjust the labels and display stats
-        month_str = "This month you worked for %d hours, %d minutes " % (m_hours,m_mins)
-        all_str = "Overall, you have worked for %d hours, %d minutes" %(t_hours,t_mins)
+        month_str = "This month you worked for %d hours, %d minutes " % (hourdiff, mindiff)
+        all_str = "Overall, you have worked for %d hours, %d minutes" %(hourdifftotal,mindifftotal)
         month_label.config(text=month_str)
         all_label.config(text=all_str)
         month_label.grid(row=7, column=2, pady=10, stick="e")
@@ -325,8 +346,6 @@ def main():
             if v.get() == 1:
                 selected[counter] = events_parsing[counter]
             counter += 1
-
-        print(selected)
 
         global connection
         for s in selected:
