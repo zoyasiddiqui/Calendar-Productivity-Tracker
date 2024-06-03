@@ -112,10 +112,6 @@ def main():
         """
         _cleanup_checkboxes()
 
-        # remove the statistics labels from the last category we asked to view them from, if they are on the screen
-        month_label.grid_remove()
-        all_label.grid_remove()
-
         # display all the buttons and such in the right panel
         title = ttk.Entry(main_frame)
         title.insert(0, "Event Title")
@@ -128,7 +124,7 @@ def main():
         stats = ttk.Button(main_frame, text="See stats for this category", command=lambda: get_stats(category))
         stats.grid(row=6, column=2, padx=5, pady=10, stick="e")
         add = ttk.Button(main_frame, text="Add events for stats", command=lambda: display_events(service, all_cals[category], category, 0))
-        add.grid(row=9, column=2, padx=5, pady=10, stick="e")
+        add.grid(row=7, column=2, padx=5, pady=10, stick="e")
 
     def get_start_time(alert):
         """
@@ -206,8 +202,10 @@ def main():
         global connection
         all_events = data.get_all_by_category(connection, category)
         
-        hourdiff = 0
-        mindiff = 0
+        hourdiff_month= 0
+        mindiff_month= 0
+        hourdiff_week = 0
+        mindiff_week = 0
         hourdifftotal = 0
         mindifftotal = 0
 
@@ -251,21 +249,44 @@ def main():
             cur_month = int(str(now).split()[0].split("-")[1])
             event_month = int(startdate[1])
             if cur_month == event_month:
-                hourdiff += curhourdiff
-                mindiff += curmindiff
+                hourdiff_month+= curhourdiff
+                mindiff_month+= curmindiff
 
             # checking that we never have an invalid number of minute
-            if mindiff > 60:
-                hourdiff += 1
-                mindiff -= 60         
+            if mindiff_month> 60:
+                hourdiff_month+= 1
+                mindiff_month-= 60 
+
+            day = now.weekday()
+            days_before = datetime.timedelta(days=-day) # if we wanted week to start from sun, subtract 1 more. if sat, 2 more. etc
+            start = now + days_before 
+            week_start = int(str(start).split()[0].split("-")[2])
+            cur_day = int(str(now).split()[0].split("-")[2])
+            event_day = int(startdate[2])
+            if week_start <= event_day <= cur_day:
+                hourdiff_week += curhourdiff
+                mindiff_week += curmindiff
+
+            # checking that we never have an invalid number of minutes
+            if mindiff_week > 60:
+                hourdiff_week += 1
+                mindiff_week -= 60
 
         # adjust the labels and display stats
-        month_str = "This month you worked for %d hours, %d minutes " % (hourdiff, mindiff)
+        week_str = "Since Monday, you have worked for %d hours, %d minutes" %(hourdiff_week, mindiff_week)
+        month_str = "This month you have worked for %d hours, %d minutes " % (hourdiff_month, mindiff_month)
         all_str = "Overall, you have worked for %d hours, %d minutes" %(hourdifftotal,mindifftotal)
-        month_label.config(text=month_str)
-        all_label.config(text=all_str)
-        month_label.grid(row=7, column=2, pady=10, stick="e")
-        all_label.grid(row=8, column=2, pady=5, stick="e")
+
+        # popup for stats
+        stats_popup = tk.Toplevel(main_frame)
+        week_label = tk.Label(stats_popup, text=week_str)
+        month_label = tk.Label(stats_popup, text=month_str)
+        all_label = tk.Label(stats_popup, text=all_str)
+        done_stats = tk.Button(stats_popup, text="Done", command=lambda: stats_popup.destroy())
+        week_label.grid(row=0, column=0, padx=5, pady=10)
+        month_label.grid(row=1, column=0, padx=5, pady=10)
+        all_label.grid(row=2, column=0, padx=5, pady=10)
+        done_stats.grid(row=3, column=0, padx=5, pady=5)
 
     def display_events(service, id, category, cur):
         """
@@ -390,11 +411,6 @@ def main():
     # set up labels that we will add / remove later
     welcome_label = ttk.Label(main_frame, text="Google Calendar Productivity Extension")
     instruction = ttk.Label(main_frame, text="Pick a category to work in.")
-    
-    month_label = ttk.Label(main_frame, text="")
-    all_label = ttk.Label(main_frame, text="")
-    month_label.grid(row=7, column=2, pady=10, stick="e")
-    all_label.grid(row=8, column=2, pady=5, stick="e")
 
     # setup buttons for login that we will now put on screen
     login_button = ttk.Button(root, text="Login To Start", command=login)
