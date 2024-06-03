@@ -179,7 +179,17 @@ def main():
             end_str = end_json.split("T")[0] + " " + end_json.split("T")[1][0:5]
 
             event = service.events().insert(calendarId=id, body=event).execute() # add event to calendar
-            data.create_event(connection, category, title.get(), start_str, end_str) # add event to database
+
+            # prompt user to ask if they want this event added to the database
+            # create the popup
+            popup = tk.Toplevel(main_frame)
+            label = tk.Label(popup, text="Would you like this event added to stats?")
+            label.grid(row=1, column=0,padx=20, pady=10)
+            # add the button to the popup
+            yes_button = tk.Button(popup, text="Yes", command=lambda: on_click("Yes", popup, connection, category, title.get(), start_str, end_str))
+            no_button = tk.Button(popup, text="No", command=lambda: on_click("No", popup, connection, category, title.get(), start_str, end_str))
+            yes_button.grid(row=0,column=1,padx=10, pady=5)
+            no_button.grid(row=2,column=1,padx=10, pady=5)
 
             alert.grid_remove() # remove the "Timer has started" label
             title.delete(0, tk.END) # empty the input box
@@ -206,17 +216,12 @@ def main():
             startdate = e[3].split()[0].split("-") + e[3].split()[1].split(":")
             enddate = e[4].split()[0].split("-") + e[4].split()[1].split(":")
 
-            print(startdate)
-            print(enddate)
-
             startday = int(startdate[2])
             endday = int(enddate[2]) 
             starthour = int(startdate[3]) 
             endhour = int(enddate[3]) 
             startmin = int(startdate[4])
             endmin = int(enddate[4])
-
-            print(startday, endday, starthour, endhour, startmin, endmin)
 
             curhourdiff = 0
             curmindiff = 0
@@ -320,7 +325,7 @@ def main():
 
         #button they will click when done
         row_ctr += 1
-        done_btn.configure(command=lambda: done_entry(variables, checkboxes, events_parsing, category, done_btn))
+        done_btn.configure(command=lambda: done_entry(variables, events_parsing, category))
         see_more_btn.configure(command=lambda: see_more_helper(service, id, category, max_ctr, events))
         done_btn.grid(row=row_ctr, column=0, padx=10, pady=10, stick="w")
         see_more_btn.grid(row=row_ctr + 1, column=0, padx=10, pady=10, stick="w")
@@ -336,7 +341,7 @@ def main():
         else:
             messagebox.showerror("Error", f"No more events to see")
 
-    def done_entry(variables, checkboxes, events_parsing, category, done_btn):
+    def done_entry(variables, events_parsing, category):
         """
         We will add the event to the database and get rid of events and done button
         """
@@ -356,6 +361,14 @@ def main():
 
         _cleanup_checkboxes()
 
+    def on_click(option, popup, connection, category, name, start_str, end_str):
+        popup.destroy()
+
+        if option == "Yes":
+            data.create_event(connection, category, name, start_str, end_str)
+        else:
+            pass
+
     def _cleanup_checkboxes():
         # in case the user had clicked on "add events" before this, but chose not to add anything, we will remove everything
         global checkboxes
@@ -367,6 +380,7 @@ def main():
                 c.grid_forget()
         except Exception:
             pass
+
 
     # set up frames
     login_frame = ttk.Frame(root)
