@@ -214,6 +214,8 @@ def main():
             startdate = e[3].split()[0].split("-") + e[3].split()[1].split(":")
             enddate = e[4].split()[0].split("-") + e[4].split()[1].split(":")
 
+            print(startdate, enddate)
+
             startday = int(startdate[2])
             endday = int(enddate[2]) 
             starthour = int(startdate[3]) 
@@ -231,8 +233,6 @@ def main():
 
             if endhour != starthour and endmin < startmin:
                 curhourdiff -= 1
-                curmindiff = (60 - startmin) + endmin
-            elif endhour != starthour and endmin > startmin:
                 curmindiff = (60 - startmin) + endmin
             else:
                 curmindiff = endmin - startmin
@@ -269,6 +269,7 @@ def main():
 
             # checking that we never have an invalid number of minutes
             if mindiff_week > 60:
+                print("hit", mindiff_week, hourdiff_week)
                 hourdiff_week += 1
                 mindiff_week -= 60
 
@@ -325,7 +326,11 @@ def main():
                         end_str = end.split("T")[0] + " " + end.split("T")[1][0:5]
                     else:
                         end_str = end.split("T")[0]
+
                     name = event.get("summary", [])
+                    if name == []: # no title
+                        name = "Untitled"
+                    print(name, start_str, end_str)
                     textstr = name + " " + start_str + " - " + end_str
                     events_parsing.append([name, start_str, end_str])
 
