@@ -23,16 +23,18 @@ def authenticate():
     # The file token.json stores the user's access and refresh tokens, and is
     # created automatically when the authorization flow completes for the first time.
     if os.path.exists("token.json"):
-        creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+        try:
+            creds = Credentials.from_authorized_user_file("token.json", SCOPES)
+        except Exception:
+            pass
+
     # If there are no (valid) credentials available, let the user log in.
     if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(
-                "credentials.json", SCOPES
-            )
-            creds = flow.run_local_server(port=0)
+        flow = InstalledAppFlow.from_client_secrets_file(
+            "credentials.json", SCOPES
+        )
+        creds = flow.run_local_server(port=0)
+            
         # Save the credentials for the next run
         with open("token.json", "w") as token:
             token.write(creds.to_json())
@@ -54,6 +56,7 @@ def main():
 
     global row_ctr
     global checkboxes
+    global selected 
 
     def login():
         """
@@ -61,20 +64,19 @@ def main():
         """
         try:
             creds = authenticate()
-
-            # if authentication works, we move frames 
-            login_button.pack_forget()
-            login_frame.destroy()
-            main_frame.pack(expand=True)
-            welcome_label.grid(row=0, column=1, pady=10)
-            instruction.grid(row=1, column=1, pady = 5)
-
-            display(creds)
-
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred during authentication:\n{str(e)}")
             print(e)
             root.quit()
+
+        # if authentication works, we move frames 
+        login_button.pack_forget()
+        login_frame.destroy()
+        main_frame.pack(expand=True)
+        welcome_label.grid(row=0, column=1, pady=10)
+        instruction.grid(row=1, column=1, pady = 5)
+
+        display(creds)
     
     def display(creds):
         """
@@ -104,13 +106,17 @@ def main():
             b.config(command=lambda cat=category: act(cat, service, all_cals))
             b.grid(row=row_ctr, column=0, pady = 5,stick="w")
             row_ctr += 1
+            
+        # intialize selected
+        global selected
+        selected = []
 
     def act(category, service, all_cals):
         """
         This function opens up the side panel (with the event title, start, end buttons, etc) once the user
         clicks on a calendar
         """
-        _cleanup_checkboxes()
+        _cleanup_checkboxes([], [])
 
         # display all the buttons and such in the right panel
         title = ttk.Entry(main_frame)
@@ -123,14 +129,16 @@ def main():
         end.grid(row=4, column=2, padx=5, pady=5, stick="e")
         stats = ttk.Button(main_frame, text="See stats for this category", command=lambda: get_stats(category))
         stats.grid(row=6, column=2, padx=5, pady=10, stick="e")
-        add = ttk.Button(main_frame, text="Add events for stats", command=lambda: display_events(service, all_cals[category], category, 0))
+        add = ttk.Button(main_frame, text="Add events for stats", command=lambda: display_events(service, all_cals[category], category, 0, "add"))
         add.grid(row=7, column=2, padx=5, pady=10, stick="e")
+        delete = ttk.Button(main_frame, text="Delete events from stats", command=lambda: display_events(service, all_cals[category], category, 0, "del"))
+        delete.grid(row=8, column=2, padx=5, pady=10, stick="e")
 
     def get_start_time(alert):
         """
         Record the time the user clicked "start", ie the start time of their task
         """
-        _cleanup_checkboxes()
+        _cleanup_checkboxes([], [])
 
         # do actual function work
         global start_time
@@ -138,13 +146,15 @@ def main():
         hours_added = datetime.timedelta(hours=-7)
         start_time += hours_added
 
+        print(start_time)
+
         alert.grid(row=5, column=2, padx=5, pady=5, stick="w") #tell users timer has started
     
     def wrapup(service, id, category, title, alert):
         """
         Put together JSON object and make API call to add event to calendar. Add to database as well. 
         """
-        _cleanup_checkboxes()
+        _cleanup_checkboxes([], [])
         
         global start_time
         global end_time
@@ -171,9 +181,6 @@ def main():
                 }
             }
 
-            start_str = start_json.split("T")[0] + " " + start_json.split("T")[1][0:5]
-            end_str = end_json.split("T")[0] + " " + end_json.split("T")[1][0:5]
-
             event = service.events().insert(calendarId=id, body=event).execute() # add event to calendar
 
             # prompt user to ask if they want this event added to the database
@@ -182,8 +189,8 @@ def main():
             label = tk.Label(popup, text="Would you like this event added to stats?")
             label.grid(row=1, column=0,padx=20, pady=10)
             # add the button to the popup
-            yes_button = tk.Button(popup, text="Yes", command=lambda: on_click("Yes", popup, connection, category, title.get(), start_str, end_str))
-            no_button = tk.Button(popup, text="No", command=lambda: on_click("No", popup, connection, category, title.get(), start_str, end_str))
+            yes_button = tk.Button(popup, text="Yes", command=lambda: on_click("Yes", popup, connection, category, title.get(), start_json, end_json))
+            no_button = tk.Button(popup, text="No", command=lambda: on_click("No", popup, connection, category, title.get(), start_json, end_json))
             yes_button.grid(row=0,column=1,padx=10, pady=5)
             no_button.grid(row=2,column=1,padx=10, pady=5)
 
@@ -197,86 +204,53 @@ def main():
         """
         Get user's statistics and display them on the screen
         """
-        _cleanup_checkboxes()
+        _cleanup_checkboxes([], []) #only need the function here, not its return value
 
         global connection
         all_events = data.get_all_by_category(connection, category)
-        
-        hourdiff_month= 0
-        mindiff_month= 0
-        hourdiff_week = 0
-        mindiff_week = 0
-        hourdifftotal = 0
-        mindifftotal = 0
 
-        # do all the work to find the amount of time worked
+        # timedelta variables that will keep track of time worked in all 3 categories
+        total_difference = datetime.timedelta()
+        month_difference = datetime.timedelta()
+        week_difference = datetime.timedelta()
+
+        # getting today's date. will use this to check which categories the event fits into 
+        now = datetime.datetime.now()
+
         for e in all_events:
-            startdate = e[3].split()[0].split("-") + e[3].split()[1].split(":")
-            enddate = e[4].split()[0].split("-") + e[4].split()[1].split(":")
+            
+            try:
+                start_list = e[3].split("T")[0].split("-") + e[3].split("T")[1].split("-")[0].split(":")
+                end_list = e[4].split("T")[0].split("-") + e[4].split("T")[1].split("-")[0].split(":")
+                start_date = datetime.datetime(
+                    int(start_list[0]), int(start_list[1]), int(start_list[2]), int(start_list[3]), int(start_list[4]))
+                end_date = datetime.datetime(
+                    int(end_list[0]), int(end_list[1]), int(end_list[2]), int(end_list[3]), int(end_list[4]))
+                time_difference = end_date - start_date
 
-            print(startdate, enddate)
+                print(e[1], start_date, end_date, time_difference)
 
-            startday = int(startdate[2])
-            endday = int(enddate[2]) 
-            starthour = int(startdate[3]) 
-            endhour = int(enddate[3]) 
-            startmin = int(startdate[4])
-            endmin = int(enddate[4])
+                total_difference += time_difference # adding to total time worked 
 
-            curhourdiff = 0
-            curmindiff = 0
+                # adding to monthly time worked
+                if start_date.month == now.month:
+                    month_difference += time_difference
 
-            if endday != startday:
-                curhourdiff = (12-starthour) + endhour
-            else:
-                curhourdiff = endhour - starthour            
+                # adding to weekly time worked
+                day_of_week = now.weekday()
+                monday = now + datetime.timedelta(days= -day_of_week)
+                if start_date >= monday:
+                    week_difference += time_difference
 
-            if endhour != starthour and endmin < startmin:
-                curhourdiff -= 1
-                curmindiff = (60 - startmin) + endmin
-            else:
-                curmindiff = endmin - startmin
-
-            hourdifftotal += curhourdiff
-            mindifftotal += curmindiff
-
-            # checking that we never have an invalid number of minute
-            if mindifftotal > 60:
-                hourdifftotal += 1
-                mindifftotal -= 60
-
-            now = datetime.datetime.now(datetime.timezone.utc)
-            cur_month = int(str(now).split()[0].split("-")[1])
-            event_month = int(startdate[1])
-            if cur_month == event_month:
-                hourdiff_month+= curhourdiff
-                mindiff_month+= curmindiff
-
-            # checking that we never have an invalid number of minute
-            if mindiff_month> 60:
-                hourdiff_month+= 1
-                mindiff_month-= 60 
-
-            day = now.weekday()
-            days_before = datetime.timedelta(days=-day) # if we wanted week to start from sun, subtract 1 more. if sat, 2 more. etc
-            start = now + days_before 
-            week_start = int(str(start).split()[0].split("-")[2])
-            cur_day = int(str(now).split()[0].split("-")[2])
-            event_day = int(startdate[2])
-            if week_start <= event_day <= cur_day:
-                hourdiff_week += curhourdiff
-                mindiff_week += curmindiff
-
-            # checking that we never have an invalid number of minutes
-            if mindiff_week > 60:
-                print("hit", mindiff_week, hourdiff_week)
-                hourdiff_week += 1
-                mindiff_week -= 60
+            except IndexError as e:
+                print(e)
+        
+        print(week_difference, month_difference, total_difference)
 
         # adjust the labels and display stats
-        week_str = "Since Monday, you have worked for %d hours, %d minutes" %(hourdiff_week, mindiff_week)
-        month_str = "This month you have worked for %d hours, %d minutes " % (hourdiff_month, mindiff_month)
-        all_str = "Overall, you have worked for %d hours, %d minutes" %(hourdifftotal,mindifftotal)
+        week_str = "Time spent working this week: %s" %(week_difference)
+        month_str = "Time spent working this month: %s" %(month_difference)
+        all_str = "Time spent working overall: %s" %(total_difference)
 
         # popup for stats
         stats_popup = tk.Toplevel(main_frame)
@@ -289,14 +263,15 @@ def main():
         all_label.grid(row=2, column=0, padx=5, pady=10)
         done_stats.grid(row=3, column=0, padx=5, pady=5)
 
-    def display_events(service, id, category, cur):
+
+    def display_events(service, id, category, cur, option):
         """
-        This function grabs all events that happened in the last 3 months in the specified category and displays them
+        This function grabs all events that happened in the last 4 weeks in the specified category and displays them
         """
 
         # dates for starting and ending of events
         now_unf = datetime.datetime.utcnow()
-        diff = datetime.timedelta(weeks=-13)
+        diff = datetime.timedelta(weeks=-4)
         start_date_unf = now_unf + diff
         now = now_unf.isoformat() + "Z"
         start_date = start_date_unf.isoformat() + "Z"
@@ -317,22 +292,22 @@ def main():
                 if loop >= max_ctr and max_ctr <= cur + 8:
 
                     start = event["start"].get("dateTime", event["start"].get("date"))
-                    if len(start.split("T")) == 2:
-                        start_str = start.split("T")[0] + " " +start.split("T")[1][0:5]
+                    if len(start.split("T")) > 1:
+                        start_str = start.split("T")[0] + " " + start.split("T")[1].split("-")[0]
                     else:
                         start_str = start.split("T")[0]
+
                     end = event["end"].get("dateTime", event["end"].get("date"))
-                    if len(end.split("T")) == 2:
-                        end_str = end.split("T")[0] + " " + end.split("T")[1][0:5]
+                    if len(end.split("T")) > 1:
+                        end_str = end.split("T")[0] + " " + end.split("T")[1].split("-")[0]
                     else:
                         end_str = end.split("T")[0]
 
                     name = event.get("summary", [])
-                    if name == []: # no title
+                    if name == [] or name == '': # no title
                         name = "Untitled"
-                    print(name, start_str, end_str)
-                    textstr = name + " " + start_str + " - " + end_str
-                    events_parsing.append([name, start_str, end_str])
+                    textstr = name + " | " + start_str + " - " + end_str
+                    events_parsing.append([name, start, end])
 
                     row_ctr += 1
 
@@ -349,43 +324,52 @@ def main():
             except KeyError:
                 pass
 
-        #button they will click when done
         row_ctr += 1
-        done_btn.configure(command=lambda: done_entry(variables, events_parsing, category))
-        see_more_btn.configure(command=lambda: see_more_helper(service, id, category, max_ctr, events))
+        done_btn.configure(command=lambda: done_entry(variables, events_parsing, category, option))
         done_btn.grid(row=row_ctr, column=0, padx=10, pady=10, stick="w")
+        see_more_btn.configure(command=lambda: see_more_helper(service, id, category, max_ctr, events, option, variables, events_parsing))
         see_more_btn.grid(row=row_ctr + 1, column=0, padx=10, pady=10, stick="w")
 
-    def see_more_helper(service, id, category, max_ctr, events):
+    def see_more_helper(service, id, category, max_ctr, events, option, variables, events_parsing):
         if max_ctr < len(events):
-            _cleanup_checkboxes()
+            global selected
+            _cleanup_checkboxes(variables, events_parsing)
+            print(selected)
 
             global row_ctr 
             row_ctr = row_ctr - 10
 
-            display_events(service, id, category, max_ctr)
+            display_events(service, id, category, max_ctr, option)
         else:
             messagebox.showerror("Error", f"No more events to see")
 
-    def done_entry(variables, events_parsing, category):
+    def done_entry(variables, events_parsing, category, option):
         """
-        We will add the event to the database and get rid of events and done button
+        We will add/delete the event to/from the database and get rid of events and done button
         """
-        selected = {}
-        counter = 0
-        for v in variables:
-            if v.get() == 1:
-                selected[counter] = events_parsing[counter]
-            counter += 1
+
+        global selected
+        _cleanup_checkboxes(variables, events_parsing)
+        print(selected)
 
         global connection
-        for s in selected:
-            name = selected[s][0]
-            start_time = selected[s][1]
-            end_time = selected[s][2]
-            data.create_event(connection, category, name, start_time, end_time)
 
-        _cleanup_checkboxes()
+        if option == "add":
+            for s in selected:
+                name = s[0]
+                start_time = s[1]
+                end_time = s[2]
+                data.create_event(connection, category, name, start_time, end_time)
+
+        if option == "del":
+            for s in selected:
+                name = s[0]
+                start_time = s[1]
+                end_time = s[2]
+                data.delete_event(connection, category, name, start_time, end_time)
+        
+        selected = []
+            
 
     def on_click(option, popup, connection, category, name, start_str, end_str):
         popup.destroy()
@@ -395,9 +379,16 @@ def main():
         else:
             pass
 
-    def _cleanup_checkboxes():
+    def _cleanup_checkboxes(variables, events_parsing):
         # in case the user had clicked on "add events" before this, but chose not to add anything, we will remove everything
         global checkboxes
+        global selected
+
+        counter = 0
+        for v in variables:
+            if v.get() == 1:
+                selected.append(events_parsing[counter])
+            counter += 1
 
         done_btn.grid_forget()
         see_more_btn.grid_forget()

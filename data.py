@@ -53,6 +53,35 @@ def get_all_by_category(connection, category):
 
     return events_list
 
+def get_event(connection, category, name, starttime, endtime):
+
+    sql = ''' SELECT * FROM Events where category = ? AND name = ? AND startdate = ? AND enddate = ? '''
+    cur = connection.cursor()
+    cur.execute(sql, (category,name,starttime,endtime,))
+    rows = cur.fetchall()
+    events_list = []
+    for r in rows:
+        events_list.append(r)
+
+    return events_list
+
+def delete_event(connection, category, name, startdate, enddate):
+    """Delete an event by category, name, startdate, and enddate"""
+    try:
+
+        events = get_event(connection, category, name,startdate,enddate)
+        print(events)
+
+        sql = ''' DELETE FROM Events WHERE category = ? AND name = ? AND startdate = ? AND enddate = ? '''
+        cur = connection.cursor()
+        cur.execute(sql, (category, name, startdate, enddate,))
+        connection.commit()
+
+        return cur.rowcount  # Returns the number of rows deleted
+    except Exception as e:
+        print("ERROR: ", e)
+        return None
+
 def main():
     database = "Events.db"
     conn = create_connection(database)
