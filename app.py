@@ -146,8 +146,6 @@ def main():
         hours_added = datetime.timedelta(hours=-7)
         start_time += hours_added
 
-        print(start_time)
-
         alert.grid(row=5, column=2, padx=5, pady=5, stick="w") #tell users timer has started
     
     def wrapup(service, id, category, title, alert):
@@ -228,8 +226,6 @@ def main():
                     int(end_list[0]), int(end_list[1]), int(end_list[2]), int(end_list[3]), int(end_list[4]))
                 time_difference = end_date - start_date
 
-                print(e[1], start_date, end_date, time_difference)
-
                 total_difference += time_difference # adding to total time worked 
 
                 # adding to monthly time worked
@@ -239,13 +235,11 @@ def main():
                 # adding to weekly time worked
                 day_of_week = now.weekday()
                 monday = now + datetime.timedelta(days= -day_of_week)
-                if start_date >= monday:
+                if start_date.month >= monday.month and start_date.day >= monday.day:
                     week_difference += time_difference
 
             except IndexError as e:
                 print(e)
-        
-        print(week_difference, month_difference, total_difference)
 
         # adjust the labels and display stats
         week_str = "Time spent working this week: %s" %(week_difference)
@@ -334,7 +328,6 @@ def main():
         if max_ctr < len(events):
             global selected
             _cleanup_checkboxes(variables, events_parsing)
-            print(selected)
 
             global row_ctr 
             row_ctr = row_ctr - 10
@@ -350,7 +343,6 @@ def main():
 
         global selected
         _cleanup_checkboxes(variables, events_parsing)
-        print(selected)
 
         global connection
 
